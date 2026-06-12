@@ -7,6 +7,7 @@ namespace Drupal\uncached_blocks\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Block\BlockManagerInterface;
+use Drupal\block\Entity\Block;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -49,9 +50,10 @@ class UncachedBlocksConfigForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('uncached_blocks.settings');
-    $uncached_blocks = $config->get('uncached_block_types') ?? [];
+    $uncached_block_types = $config->get('uncached_block_types') ?? [];
+    $uncached_block_ids = $config->get('uncached_block_ids') ?? [];
 
-    // Get all available block definitions
+    // Get all available block definitions for types
     $block_definitions = $this->blockManager->getDefinitions();
     $block_options = [];
     $base_ids = [];
@@ -76,20 +78,64 @@ class UncachedBlocksConfigForm extends ConfigFormBase {
 
     asort($block_options);
 
-    $form['description'] = [
+    // Get all placed block instances
+    $block_entities = Block::loadMultiple();
+    $block_id_options = [];
+    foreach ($block_entities as $block_entity) {
+      $plugin = $block_entity->getPlugin();
+      $label = $block_entity->label() ?? $block_entity->id();
+      $plugin_label = $block_definitions[$plugin->getPluginId()]['admin_label'] ?? $plugin->getPluginId();
+      $block_id_options[$block_entity->id()] = sprintf('%s (%s)', $label, $plugin_label);
+    }
+    asort($block_id_options);
+
+    // Block types section
+    $form['block_types_section'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Block Types'),
+      '#description' => $this->t('Select block types to disable caching for all instances of that type.'),
+      '#open' => TRUE,
+    ];
+
+    $form['block_types_section']['description'] = [
       '#type' => 'item',
       '#markup' => $this->t('Select which block types should never be cached. You can select individual blocks or wildcard options (marked with "all") to disable caching for all blocks of that type.'),
     ];
 
-    $form['uncached_block_types'] = [
+    $form['block_types_section']['uncached_block_types'] = [
       '#type' => 'select',
       '#title' => $this->t('Uncached block types'),
       '#description' => $this->t('Hold Ctrl (Cmd on Mac) to select multiple blocks.'),
       '#options' => $block_options,
-      '#default_value' => $uncached_blocks,
+      '#default_value' => $uncached_block_types,
       '#multiple' => TRUE,
       '#size' => 15,
     ];
+
+    // Block instances section
+    $form['block_ids_section'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Specific Block Instances'),
+      '#description' => $this->t('Select specific placed blocks to disable caching for individual instances.'),
+      '#open' => TRUE,
+    ];
+
+    if (empty($block_id_options)) {
+      $form['block_ids_section']['no_blocks'] = [
+        '#type' => 'item',
+        '#markup' => $this->t('No placed blocks found. Place some blocks first in Layout Builder or the Block UI.'),
+      ];
+    } else {
+      $form['block_ids_section']['uncached_block_ids'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Uncached block instances'),
+        '#description' => $this->t('Select specific block instances. Hold Ctrl (Cmd on Mac) to select multiple blocks.'),
+        '#options' => $block_id_options,
+        '#default_value' => $uncached_block_ids,
+        '#multiple' => TRUE,
+        '#size' => 15,
+      ];
+    }
 
     return parent::buildForm($form, $form_state);
   }
@@ -98,10 +144,12 @@ class UncachedBlocksConfigForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $values = $form_state->getValue('uncached_block_types') ?? [];
+    $block_types = $form_state->getValue('uncached_block_types') ?? [];
+    $block_ids = $form_state->getValue('uncached_block_ids') ?? [];
 
     $this->config('uncached_blocks.settings')
-      ->set('uncached_block_types', array_values($values))
+      ->set('uncached_block_types', array_values($block_types))
+      ->set('uncached_block_ids', array_values($block_ids))
       ->save();
 
     parent::submitForm($form, $form_state);
