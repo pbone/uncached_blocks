@@ -1,5 +1,6 @@
 name: Uncached Blocks
-description: Provides a way to disable caching for specific block types.
+description: Provides a way to disable caching for specific block instances.
 type: module
 core_version_requirement: ^10 || ^11
 package: Caching
+configure: uncached_blocks.config
