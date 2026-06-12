@@ -1,0 +1,7 @@
+uncached_blocks.config:
+  path: '/admin/config/system/uncached-blocks'
+  defaults:
+    _form: '\Drupal\uncached_blocks\Form\UncachedBlocksConfigForm'
+    _title: 'Uncached Blocks Configuration'
+  requirements:
+    _permission: 'administer site configuration'

@@ -1,0 +1,2 @@
+# Default configuration for uncached_blocks module
+uncached_block_types: []

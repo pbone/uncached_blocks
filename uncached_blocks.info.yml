@@ -1,0 +1,5 @@
+name: Uncached Blocks
+description: Provides a way to disable caching for specific block types.
+type: module
+core_version_requirement: ^10 || ^11
+package: Caching
