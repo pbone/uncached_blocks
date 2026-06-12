@@ -15,42 +15,19 @@ class UncachedBlocksHooks {
   /**
    * Implements hook_block_build_alter().
    *
-   * Disables caching for specific block types and block IDs based on configuration.
+   * Disables caching for specific block IDs based on configuration.
    */
   #[Hook('block_build_alter')]
   public function blockBuildAlter(array &$build, BlockPluginInterface $block): void {
     $config = \Drupal::config('uncached_blocks.settings');
-    $uncached_block_types = $config->get('uncached_block_types') ?? [];
     $uncached_block_ids = $config->get('uncached_block_ids') ?? [];
 
-    if (empty($uncached_block_types) && empty($uncached_block_ids)) {
+    if (empty($uncached_block_ids)) {
       return;
     }
 
-    // Check block types
-    if (!empty($uncached_block_types)) {
-      $block_base_id = $block->getBaseId();
-      $block_plugin_id = $block->getPluginId();
-
-      foreach ($uncached_block_types as $uncached_block) {
-        // Support prefix matching for derived blocks (e.g., 'views_block:')
-        if (str_starts_with($uncached_block, '*')) {
-          $prefix = substr($uncached_block, 1);
-          if (str_starts_with($block_plugin_id, $prefix)) {
-            $build['#cache']['max-age'] = 0;
-            return;
-          }
-        }
-        // Exact match on base ID or plugin ID
-        elseif ($block_base_id === $uncached_block || $block_plugin_id === $uncached_block) {
-          $build['#cache']['max-age'] = 0;
-          return;
-        }
-      }
-    }
-
-    // Check specific block IDs if no block type match
-    if (!empty($uncached_block_ids) && isset($build['#block'])) {
+    // Check specific block IDs
+    if (isset($build['#block'])) {
       $block_entity = $build['#block'];
       if ($block_entity && in_array($block_entity->id(), $uncached_block_ids)) {
         $build['#cache']['max-age'] = 0;
