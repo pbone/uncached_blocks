@@ -19,6 +19,7 @@ class TestUncachedBlock extends BlockBase {
     return [
       '#markup' => 'Block rendered at: ' . date('Y-m-d H:i:s'),
       '#cache' => [
+        'keys' => ['test_uncached_block'],
         'max-age' => 3600, // Cache for 1 hour by default
       ],
     ];
